@@ -3,10 +3,14 @@ import requests
 import json
 import html
 from bs4 import BeautifulSoup 
+import sys
 
+
+problem_url=sys.argv[1] #Example problem
+problem_name=problem_url.split("/")[problem_url.split("/").index("problems")+1]
 
 def storeTestCases(data):
-    path="/Users/vivekkabra/Desktop" #Path to be replaced with extension's directory where test cases are to be stored
+    path=sys.argv[2] #To be given as path of extension's directory where test cases are to be stored
     if os.path.exists(os.path.join(path, "input")):
         files=os.listdir(os.path.join(path, "input"))
         for file in files:
@@ -48,8 +52,6 @@ def storeTestCases(data):
         count+=1
   
 
-problem_url="https://leetcode.com/problems/two-sum/description/" #Example problem
-problem_name=problem_url.split("/")[problem_url.split("/").index("problems")+1]
 endpoint_url= "https://leetcode.com/graphql"
 
 query= f"""
