@@ -1,0 +1,63 @@
+{
+  "name": "cph-leetcode",
+  "displayName": "CPH-Leetcode",
+  "description": "Extension to locally test your code for the test cases of the Leetcode problem",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:extension.fetchTestCases"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+    {
+      "command": "cph.fetchTestCases",
+      "title": "CPH: Fetch Test Cases"
+    },
+    {
+      "command": "cph.runTestCases",
+      "title": "CPH: Run Test Cases"
+    }
+  ]
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.96.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.16.0",
+    "vscode": "^1.1.37"
+  },
+  
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "language": {
+        "type": "string",
+        "default": "python"
+      },
+      "language.python.run": {
+        "type": "string",
+        "default": "python $fileName"
+      },
+      "language.cpp.run": {
+        "type": "string",
+        "default": "./$fileNameWithoutExt"
+      }
+    }
+  },
+  "dependencies": {
+    
+  }
+}
