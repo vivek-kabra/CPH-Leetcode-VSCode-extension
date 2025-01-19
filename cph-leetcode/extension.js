@@ -99,7 +99,6 @@ class TestCasesViewProvider {
 	}
 	
 	runCmdExecution(execCommand, inputPath, expectedOutput, idx){
-		
 		return new Promise((resolve, reject) =>{
 			let testResultsElem;
 			const child= cp.spawn(execCommand, { shell: true });
@@ -127,8 +126,6 @@ class TestCasesViewProvider {
 						expected: expectedOutput.trim(),
 						actual: actualOutput.trim()
 					};
-					
-					// vscode.window.showInformationMessage(`Test case ${idx + 1}: ${result}`);
 					resolve(testResultsElem);
 				} 
 				else{
@@ -194,8 +191,12 @@ class TestCasesViewProvider {
 			if (language=="cpp"){
 				execCommand= runCommand.replace('$fileNameWithoutExt', path.join(path.dirname(fileName), fileNameWithoutExt));
 			}
-			else{ //language is python
+			else if (language=="python"){ //language is python
 				execCommand= runCommand.replace('$fileName', fileName);
+			}
+			else{
+				vscode.window.showErrorMessage('Unsupported language; please use C++/Python');
+				break;
 			}
 			try{
 				const testResult=await this.runCmdExecution(execCommand, inputPath, expectedOutput, idx);
@@ -208,14 +209,14 @@ class TestCasesViewProvider {
 		webviewView.webview.postMessage({command: 'showTestResults', testResults});
 	}
 	
-	getWebviewContent(webview) {
+	getWebviewContent(webview){
 		return `
 			<!DOCTYPE html>
 			<html lang="en">
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>Test Cases</title>
+				<title>CPH-Leetcode</title>
 				<style>
 					body {
 						font-family: Arial, sans-serif;
@@ -226,12 +227,13 @@ class TestCasesViewProvider {
 						padding: 10px;
 						margin: 5px 0;
 						border-radius: 5px;
+						
 					}
 					.passed {
-						background-color: #d4edda;
+						border: 2px solid green;
 					}
 					.failed {
-						background-color: #f8d7da;
+						border: 2px solid red;
 					}
 					#statusLabel {
 						margin-top: 10px;
@@ -243,16 +245,33 @@ class TestCasesViewProvider {
 						font-size: 14px;
 						color: #f00;
 					}
+					button {
+						background-color:rgb(250, 226, 76); 
+						color: black; 
+						border: 2px solid rgb(172, 132, 0);
+						border-radius: 5px; 
+						padding: 7px 7px; 
+						font-size: 14px; 
+						font-weight: bold;
+						cursor: pointer; 
+					}
+					button:hover {
+						background-color: rgb(255, 196, 0);
+					}
+					input[type="text"] {
+						border-radius: 25px; 
+						border: 2px solid #007BFF;
+						outline: none; 
+					}
 				</style>
 			</head>
 			<body>
-				<h2>LeetCode Test Case Fetcher</h2>
-
-				<input type="text" id="problemUrl" placeholder="Enter LeetCode problem URL" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-				<button id="fetchTestCasesBtn">Fetch Test Cases</button>
-				<p id="statusLabel">Enter the URL and fetch test cases.</p>
+				<h2>CPH-Leetcode</h2>
+				<input type="text" id="problemUrl" placeholder="Enter LeetCode problem URL" style="width: 90%; padding: 8px; margin-bottom: 10px;">
+				<button id="fetchTestCasesBtn">Fetch test cases</button>
+				<p id="statusLabel">Enter the URL and fetch test cases</p>
 				<br>
-				<button id="runTestCasesBtn" disabled>Run Test Cases</button>
+				<button id="runTestCasesBtn" disabled>Run test cases</button>
 				<p id="runStatusLabel">Fetch test cases first.</p>
 				<div id="resultsContainer"></div>
 
@@ -281,6 +300,7 @@ class TestCasesViewProvider {
 								testCases = message.testCases;
 								document.getElementById('statusLabel').innerText = 'Test cases fetched!';
 								document.getElementById('runTestCasesBtn').disabled = false;
+								document.getElementById('runStatusLabel').innerText = '';
 								displayTestCases(testCases);
 								break;
 							case 'showTestResults':
@@ -291,14 +311,14 @@ class TestCasesViewProvider {
 
 					function displayTestCases(testCases) {
 					const resultsContainer = document.getElementById('resultsContainer');
-					resultsContainer.innerHTML = ''; // Clear any existing results
+					resultsContainer.innerHTML = ''; 
 
 					testCases.forEach(testCase => {
 						const card = document.createElement('div');
-						card.className = 'card';  // Keep it simple for test case display
+						card.className = 'card'; 
 
 						const testCasePara = document.createElement('p');
-						testCasePara.textContent = 'Test Case ' + testCase.testCaseId;
+						testCasePara.textContent = 'Test case ' + testCase.testCaseId;
 
 						const inputPara = document.createElement('p');
 						inputPara.innerHTML = '<strong>Input:</strong> ' + testCase.input;
@@ -313,21 +333,22 @@ class TestCasesViewProvider {
 
 					function displayTestResults(testResults) {
 						const resultsContainer = document.getElementById('resultsContainer');
-						resultsContainer.innerHTML = ''; // Clear any existing results
+						resultsContainer.innerHTML = ''; 
 
 						testResults.forEach(result => {
 							const card = document.createElement('div');
 							card.className = 'card ' + (result.passed ? 'passed' : 'failed');
 
 							const testCasePara = document.createElement('p');
-							testCasePara.textContent = 'Test Case ' + result.testCaseId + ': ' + (result.passed ? 'Passed' : 'Failed');
+							testCasePara.textContent = 'Test Case ' + result.testCaseId + ': ' + (result.passed ? 'PASSED' : 'FAILED');
+							testCasePara.style.color = result.passed?'green' : 'red';
 
 							const inputPara = document.createElement('p');
 							inputPara.innerHTML = '<strong>Input:</strong> ' + result.input;
 
 							const expectedPara = document.createElement('p');
 							expectedPara.innerHTML = '<strong>Expected:</strong> ' + result.expected;
-
+						
 							const actualPara = document.createElement('p');
 							actualPara.innerHTML = '<strong>Actual:</strong> ' + result.actual;
 
