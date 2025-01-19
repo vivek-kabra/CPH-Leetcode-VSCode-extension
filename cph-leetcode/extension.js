@@ -114,7 +114,8 @@ class TestCasesViewProvider {
 				actualOutput+= data.toString(); 
 			});
 			child.stderr.on('data', (data) =>{
-				vscode.window.showErrorMessage(`Execution failed: ${data}`);
+				// vscode.window.showErrorMessage(`Execution failed: ${data}`);
+				reject(new Error(`Execution failed: ${data}`));
 			});
 			child.on('close', (code) => {
 				if (code==0){
@@ -131,12 +132,33 @@ class TestCasesViewProvider {
 					resolve(testResultsElem);
 				} 
 				else{
-					vscode.window.showErrorMessage(`Process exited with code: ${code}`);
 					reject(new Error(`Process exited with code: ${code}`));
 				}
 			});
 		});
 		
+	}
+
+	compileCode(compCommand, compArgs){
+		return new Promise((resolve, reject) => {
+			const compileProcess = cp.spawn(compCommand, compArgs, { shell: true });
+			compileProcess.stdout.on('data', (data) =>{
+				console.log(`Compilation stdout: ${data}`);
+			});
+	
+			compileProcess.stderr.on('data', (data) =>{
+				console.log(`Compilation stderr: ${data}`);
+			});
+	
+			compileProcess.on('close', (code)=>{
+				if (code === 0){
+					resolve();
+				}
+				else{
+					reject(new Error('Compilation failed'));
+				}
+			});
+		});
 	}
 	
 	async runTestCases(language, runCommand, webviewView){
@@ -148,60 +170,42 @@ class TestCasesViewProvider {
 		const inputDir= path.resolve(__dirname, 'input');
 		const outputDir= path.resolve(__dirname, 'output');
 		const inputFiles= fs.readdirSync(inputDir).filter(file =>file.startsWith('input'));
+		const fileName= activeEditor.document.fileName;
+		const fileNameWithoutExt= path.basename(fileName, path.extname(fileName));
+
+		if (language=="cpp"){ //Compilation is required before execution of code in case of C++
+			const compCommand='g++';
+			const compArgs= ['-std=c++17', '-o', `"${path.join(path.dirname(fileName), fileNameWithoutExt)}"`, `"${fileName}"`];
+			try{
+                await this.compileCode(compCommand, compArgs);
+            } 
+			catch(error){
+                vscode.window.showErrorMessage(error.message);
+				return;
+            }
+		}
 		let testResults=[];
 
 		for (const [idx, inputFile] of inputFiles.entries()){
 			const inputPath= path.join(inputDir, inputFile);
 			const expectedOutputPath= path.join(outputDir, `output${idx + 1}.txt`);
 			const expectedOutput= fs.readFileSync(expectedOutputPath, 'utf-8');
-				
-			const fileName= activeEditor.document.fileName;
-			const fileNameWithoutExt= path.basename(fileName, path.extname(fileName));
-			
+			let execCommand;
 			if (language=="cpp"){
-				const execCommand= runCommand.replace('$fileNameWithoutExt', path.join(path.dirname(fileName), fileNameWithoutExt));
-				const compCommand='g++';
-				const compArgs= ['-std=c++17', '-o', `"${path.join(path.dirname(fileName), fileNameWithoutExt)}"`, `"${fileName}"`];
-				
-				const compileProcess= cp.spawn(compCommand, compArgs, { shell: true });
-				compileProcess.stdout.on('data', (data) =>{
-					console.log(`Compilation stdout: ${data}`);
-				});
-				compileProcess.stderr.on('data', (data) =>{
-					vscode.window.showErrorMessage(`Compilation failed: ${data}`);
-				});
-				compileProcess.on('close', async (code) =>{
-					if (code==0){
-						try{	
-							const testResult= await this.runCmdExecution(execCommand, inputPath, expectedOutput, idx);
-							testResults.push(testResult);
-							// vscode.window.showInformationMessage(`Status:${testResult.testCaseId} ${testResult.passed} ${testResults.length}`);
-
-						}
-						catch(error){
-							vscode.window.showErrorMessage(`Execution failed: ${error.message}`);
-						}
-					}
-					else{
-						vscode.window.showErrorMessage('Compilation failed.');
-					}
-				});
+				execCommand= runCommand.replace('$fileNameWithoutExt', path.join(path.dirname(fileName), fileNameWithoutExt));
 			}
 			else{ //language is python
-				try{
-					const execCommand= runCommand.replace('$fileName', fileName);
-					const testResult=await this.runCmdExecution(execCommand, inputPath, expectedOutput, idx);
-					testResults.push(testResult);
-				}
-				catch(error){
-					vscode.window.showErrorMessage(`Execution failed: ${error.message}`);
-				}
+				execCommand= runCommand.replace('$fileName', fileName);
+			}
+			try{
+				const testResult=await this.runCmdExecution(execCommand, inputPath, expectedOutput, idx);
+				testResults.push(testResult);
+			}
+			catch(error){
+				vscode.window.showErrorMessage(`Execution failed: ${error.message} and ${fileName}`);
 			}
 		};
-
-		vscode.window.showInformationMessage(`Length: ${testResults.length}`);
-		webviewView.webview.postMessage({ command: 'showTestResults', testResults });
-		testResults=[];
+		webviewView.webview.postMessage({command: 'showTestResults', testResults});
 	}
 	
 	getWebviewContent(webview) {
