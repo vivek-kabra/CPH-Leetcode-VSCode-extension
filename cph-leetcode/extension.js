@@ -3,42 +3,15 @@ const cp=require('child_process');
 const fs= require('fs');
 const path= require('path');
 
-let language;
-
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context){
-
 	vscode.window.registerWebviewViewProvider(
         'CPHleetcodeview', 
         new TestCasesViewProvider(context)
     );
-
-	// let fetchCommand= vscode.commands.registerCommand('cph.fetchTestCases', () => {
-    //     vscode.window.showInputBox({prompt: 'Enter Leetcode problem URL'}).then(problemURL =>{
-    //         if (problemURL){
-    //             fetchTestCases(problemURL);
-    //         }
-    //     });
-    // });
-
-	// runCommand= vscode.commands.registerCommand('cph.runTestCases', () =>{
-	// let runCmd;
-	// if (language=="cpp"){
-	// 	runCmd='"$fileNameWithoutExt"';
-	// }
-	// else{ //language is python
-	// 	runCmd='python3 "$fileName"';
-	// }
-	// runTestCases(language,	 runCmd);
-	// });
-
-    // context.subscriptions.push(fetchCommand);
-	// context.subscriptions.push(runCommand);
 }
-
-
 
 class TestCasesViewProvider {
     constructor(context) {
@@ -57,12 +30,15 @@ class TestCasesViewProvider {
                     return;
                 case 'runTestCases':
 					let runCmd;
-					language= vscode.window.activeTextEditor.document.languageId;
+					let language= vscode.window.activeTextEditor.document.languageId;
 					if (language=="cpp"){
 						runCmd='"$fileNameWithoutExt"';
 					}
-					else{ //language is python
+					else if (language=="python"){ 
 						runCmd='python3 "$fileName"';
+					}
+					else { //language is java
+						runCmd='cd "$path" && java "$fileNameWithoutExt"';
 					}
 					this.runTestCases(language,	 runCmd, webviewView);
                     return;
@@ -75,6 +51,7 @@ class TestCasesViewProvider {
 		cp.exec(`${scriptPath} ${problemURL} ${__dirname}`, (error, stdout, stderr) =>{
 			if (error){
 				vscode.window.showErrorMessage(`Error fetching test cases: ${stderr}`);
+				webviewView.webview.postMessage({ command: 'showError' });
 			}
 			else{
 				const testCasesDir = path.join(__dirname, 'input');
@@ -82,7 +59,6 @@ class TestCasesViewProvider {
 				const files = fs.readdirSync(testCasesDir);
 				files.forEach(file => {
 					const testCaseId = parseInt(file.slice(5, -4));
-					
 					const filePath = path.join(testCasesDir, file);
 					const fileContent = fs.readFileSync(filePath, 'utf-8');
 					
@@ -91,7 +67,6 @@ class TestCasesViewProvider {
 						input: fileContent
 					});
 				});
-
 				webviewView.webview.postMessage({ command: 'showTestCases', testCases });
 				vscode.window.showInformationMessage('Test cases fetched');
 			}
@@ -113,8 +88,7 @@ class TestCasesViewProvider {
 				actualOutput+= data.toString(); 
 			});
 			child.stderr.on('data', (data) =>{
-				// vscode.window.showErrorMessage(`Execution failed: ${data}`);
-				reject(new Error(`Execution failed: ${data}`));
+				reject(new Error(`${data}`));
 			});
 			child.on('close', (code) => {
 				if (code==0){
@@ -128,9 +102,6 @@ class TestCasesViewProvider {
 					};
 					resolve(testResultsElem);
 				} 
-				else{
-					reject(new Error(`Process exited with code: ${code}`));
-				}
 			});
 		});
 		
@@ -145,14 +116,12 @@ class TestCasesViewProvider {
 	
 			compileProcess.stderr.on('data', (data) =>{
 				console.log(`Compilation stderr: ${data}`);
+				reject(new Error(`Compilation failed: ${data}`));
 			});
 	
 			compileProcess.on('close', (code)=>{
 				if (code === 0){
 					resolve();
-				}
-				else{
-					reject(new Error('Compilation failed'));
 				}
 			});
 		});
@@ -170,7 +139,8 @@ class TestCasesViewProvider {
 		const fileName= activeEditor.document.fileName;
 		const fileNameWithoutExt= path.basename(fileName, path.extname(fileName));
 
-		if (language=="cpp"){ //Compilation is required before execution of code in case of C++
+		//Compilation is required before execution of code in case of C++ and java
+		if (language=="cpp"){ 
 			const compCommand='g++';
 			const compArgs= ['-std=c++17', '-o', `"${path.join(path.dirname(fileName), fileNameWithoutExt)}"`, `"${fileName}"`];
 			try{
@@ -178,11 +148,27 @@ class TestCasesViewProvider {
             } 
 			catch(error){
                 vscode.window.showErrorMessage(error.message);
+				let empty=[];
+				webviewView.webview.postMessage({command: 'showTestResults', empty});
+				return;
+            }
+		}
+		else if (language=="java"){
+			const compCommand='javac';
+			const compArgs= [`"${fileName}"`];
+			try{
+                await this.compileCode(compCommand, compArgs);
+            } 
+			catch(error){
+                vscode.window.showErrorMessage(error.message);
+				let empty=[];
+				webviewView.webview.postMessage({command: 'showTestResults', empty});
 				return;
             }
 		}
 		let testResults=[];
 
+		//Run the code for each test case
 		for (const [idx, inputFile] of inputFiles.entries()){
 			const inputPath= path.join(inputDir, inputFile);
 			const expectedOutputPath= path.join(outputDir, `output${idx + 1}.txt`);
@@ -191,11 +177,14 @@ class TestCasesViewProvider {
 			if (language=="cpp"){
 				execCommand= runCommand.replace('$fileNameWithoutExt', path.join(path.dirname(fileName), fileNameWithoutExt));
 			}
-			else if (language=="python"){ //language is python
+			else if (language=="python"){
 				execCommand= runCommand.replace('$fileName', fileName);
 			}
+			else if (language=="java"){
+				execCommand= runCommand.replace('$path', path.join(path.dirname(fileName))).replace('$fileNameWithoutExt', fileNameWithoutExt);
+			}
 			else{
-				vscode.window.showErrorMessage('Unsupported language; please use C++/Python');
+				vscode.window.showErrorMessage('Unsupported language; please use C++/Python/Java');
 				break;
 			}
 			try{
@@ -203,7 +192,7 @@ class TestCasesViewProvider {
 				testResults.push(testResult);
 			}
 			catch(error){
-				vscode.window.showErrorMessage(`Execution failed: ${error.message} and ${fileName}`);
+				vscode.window.showErrorMessage(`Execution failed: ${error.message} command: ${execCommand}`);
 			}
 		};
 		webviewView.webview.postMessage({command: 'showTestResults', testResults});
@@ -227,7 +216,6 @@ class TestCasesViewProvider {
 						padding: 10px;
 						margin: 5px 0;
 						border-radius: 5px;
-						
 					}
 					.passed {
 						border: 2px solid green;
@@ -280,16 +268,15 @@ class TestCasesViewProvider {
 					let testCases = [];
 
 					document.getElementById('fetchTestCasesBtn').addEventListener('click', () => {
-						console.log("Fetch test cases button clicked");
 						const problemUrl = document.getElementById('problemUrl').value;
-						document.getElementById('statusLabel').innerText = 'Fetching test cases...';
-						vscode.postMessage({ command: 'fetchTestCases', url: problemUrl });
+						if (problemUrl.trim()!='') {
+							document.getElementById('statusLabel').innerText = 'Fetching test cases...';
+							vscode.postMessage({ command: 'fetchTestCases', url: problemUrl });
+						}
 					});
 
-					document.getElementById('runTestCasesBtn').addEventListener('click', function() {
-						if (testCases.length > 0) {
+					document.getElementById('runTestCasesBtn').addEventListener('click', ()=> {
 							vscode.postMessage({ command: 'runTestCases', testCases });
-						}
 					});
 
 					window.addEventListener('message', function(event) {
@@ -306,6 +293,8 @@ class TestCasesViewProvider {
 							case 'showTestResults':
 								displayTestResults(message.testResults);
 								break;
+							case 'showError':
+								document.getElementById('statusLabel').innerText = 'An error occured!';
 						}
 					});
 
