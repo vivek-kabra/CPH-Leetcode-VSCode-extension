@@ -10,20 +10,28 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:extension.fetchTestCases"
+    "onView:CPHleetcodeview"
   ],
   "main": "./extension.js",
   "contributes": {
-    "commands": [
-    {
-      "command": "cph.fetchTestCases",
-      "title": "CPH: Fetch Test Cases"
+    "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "CPHleetcode",
+                    "title": "CPH-Leetcode",
+                    "icon": "resources/icon.png"
+                }
+            ]
     },
-    {
-      "command": "cph.runTestCases",
-      "title": "CPH: Run Test Cases"
+    "views": {
+        "CPHleetcode": [
+            {
+                "id": "CPHleetcodeview",
+                "name": "CPH-Leetcode",
+                "type": "webview"
+            }
+        ]
     }
-  ]
   },
   "scripts": {
     "lint": "eslint .",
