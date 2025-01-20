@@ -42,6 +42,12 @@ class TestCasesViewProvider {
 					}
 					this.runTestCases(language,	 runCmd, webviewView);
                     return;
+				case 'updateTestCase':
+					this.updateTestCases(message.testCaseId, message.input, message.expectedOutput, webviewView);
+					return;
+				case 'showError':
+					vscode.window.showErrorMessage(message.message);
+					return;
             }
         });
     }
@@ -69,6 +75,31 @@ class TestCasesViewProvider {
 				});
 				webviewView.webview.postMessage({ command: 'showTestCases', testCases });
 				vscode.window.showInformationMessage('Test cases fetched');
+			}
+		});
+	}
+	updateTestCases(testCaseId, new_input, new_expectedOutput, webviewView){
+		const scriptPath= path.join(__dirname, 'test_cases_updating')
+		cp.exec(`${scriptPath} ${__dirname} ${testCaseId} ${new_input} ${new_expectedOutput}`, (error, stdout, stderr) =>{
+			if (error){
+				vscode.window.showErrorMessage(`Error updating test cases: ${stderr}`);
+			}
+			else{
+				const testCasesDir = path.join(__dirname, 'input');
+				const testCases = [];
+				const files = fs.readdirSync(testCasesDir);
+				files.forEach(file => {
+					const testCaseId = parseInt(file.slice(5, -4));
+					const filePath = path.join(testCasesDir, file);
+					const fileContent = fs.readFileSync(filePath, 'utf-8');
+					
+					testCases.push({
+						testCaseId: testCaseId,
+						input: fileContent
+					});
+				});
+				webviewView.webview.postMessage({ command: 'showTestCases', testCases });
+				vscode.window.showInformationMessage('Test case updated');
 			}
 		});
 	}
@@ -212,6 +243,7 @@ class TestCasesViewProvider {
 						padding: 10px;
 					}
 					.card {
+						
 						border: 1px solid #ccc;
 						padding: 10px;
 						margin: 5px 0;
@@ -245,6 +277,22 @@ class TestCasesViewProvider {
 					}
 					button:hover {
 						background-color: rgb(255, 196, 0);
+					}
+					.editButton {
+						
+						top: 50%;
+						right: 10px;
+						transform: translateY(-50%);
+						background-color: #007BFF; 
+						color: black; 
+						border: 2px solid rgb(0, 49, 102);
+						border-radius: 5px; 
+						font-size: 14px;
+						cursor: pointer;
+						
+					}
+					.editButton:hover {
+						color: rgb(1, 83, 170);
 					}
 					input[type="text"] {
 						border-radius: 25px; 
@@ -299,25 +347,79 @@ class TestCasesViewProvider {
 					});
 
 					function displayTestCases(testCases) {
-					const resultsContainer = document.getElementById('resultsContainer');
-					resultsContainer.innerHTML = ''; 
+						const resultsContainer = document.getElementById('resultsContainer');
+						resultsContainer.innerHTML = ''; 
 
-					testCases.forEach(testCase => {
-						const card = document.createElement('div');
-						card.className = 'card'; 
+						testCases.forEach(testCase => {
+							const card = document.createElement('div');
+							card.className = 'card'; 
 
-						const testCasePara = document.createElement('p');
-						testCasePara.textContent = 'Test case ' + testCase.testCaseId;
+							const testCasePara = document.createElement('p');
+							testCasePara.textContent = 'Test case ' + testCase.testCaseId;
 
-						const inputPara = document.createElement('p');
-						inputPara.innerHTML = '<strong>Input:</strong> ' + testCase.input;
+							const inputPara = document.createElement('p');
+							inputPara.innerHTML = '<strong>Input:</strong> ' + testCase.input;
+							
+							const editButton = document.createElement('button');
+							editButton.className = 'editButton';
+							editButton.innerHTML = 'edit';
+							
+							const editContainer = document.createElement('div');
+							editContainer.style.display = 'none';
 
-						card.appendChild(testCasePara);
-						card.appendChild(inputPara);
+							const inputTextBox = document.createElement('textarea');
+							inputTextBox.style.width = '90%';
+							inputTextBox.style.marginTop = '10px';
+							inputTextBox.placeholder = 'Edit input';
+							inputTextBox.value = testCase.input;
 
-						resultsContainer.appendChild(card);
+							const outputTextBox = document.createElement('textarea');
+							outputTextBox.style.width = '90%';
+							outputTextBox.style.marginTop = '10px';
+							outputTextBox.placeholder = 'Edit expected output';
+
+							const tickButton = document.createElement('button');
+							tickButton.innerHTML = 'tick';
+							tickButton.style.marginTop = '10px';
+
+							tickButton.addEventListener('click', () => {
+								const updatedInput = inputTextBox.value;
+								const updatedOutput = outputTextBox.value;
+								if (updatedInput!="" && updatedOutput!="") {
+									vscode.postMessage({
+										command: 'updateTestCase',
+										testCaseId: testCase.testCaseId,
+										input: updatedInput,
+										expectedOutput: updatedOutput,
+									});
+									editContainer.style.display = 'none';
+									editButton.style.display = 'inline';
+									
+								}
+								else{
+									vscode.postMessage({ command: 'showError', message: 'Missing field(s)' });
+								}
+								
+							});
+
+							editButton.addEventListener('click', () => {
+								editContainer.style.display = 'block';
+								editButton.style.display = 'none';
+							});
+
+							editContainer.appendChild(inputTextBox);
+							editContainer.appendChild(outputTextBox);
+							editContainer.appendChild(tickButton);
+
+							card.appendChild(testCasePara);
+							card.appendChild(inputPara);
+							card.appendChild(editButton);
+							card.appendChild(editContainer);
+
+							resultsContainer.appendChild(card);
 						});
 					}
+					
 
 
 					function displayTestResults(testResults) {
