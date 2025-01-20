@@ -243,7 +243,7 @@ class TestCasesViewProvider {
 						padding: 10px;
 					}
 					.card {
-						
+						position: relative;
 						border: 1px solid #ccc;
 						padding: 10px;
 						margin: 5px 0;
@@ -279,7 +279,7 @@ class TestCasesViewProvider {
 						background-color: rgb(255, 196, 0);
 					}
 					.editButton {
-						
+						position: absolute;
 						top: 50%;
 						right: 10px;
 						transform: translateY(-50%);
@@ -287,12 +287,24 @@ class TestCasesViewProvider {
 						color: black; 
 						border: 2px solid rgb(0, 49, 102);
 						border-radius: 5px; 
-						font-size: 14px;
+						font-size: 17px;
 						cursor: pointer;
 						
 					}
 					.editButton:hover {
-						color: rgb(1, 83, 170);
+						background-color: rgb(1, 83, 170);
+					}
+					.tickButton {
+						background-color: #007BFF; 
+						color: black; 
+						border: 2px solid rgb(0, 49, 102);
+						border-radius: 5px; 
+						font-size: 17px;
+						cursor: pointer;
+						
+					}
+					.tickButton:hover {
+						background-color: rgb(1, 83, 170);
 					}
 					input[type="text"] {
 						border-radius: 25px; 
@@ -362,7 +374,7 @@ class TestCasesViewProvider {
 							
 							const editButton = document.createElement('button');
 							editButton.className = 'editButton';
-							editButton.innerHTML = 'edit';
+							editButton.innerHTML = '&#9998';
 							
 							const editContainer = document.createElement('div');
 							editContainer.style.display = 'none';
@@ -379,8 +391,8 @@ class TestCasesViewProvider {
 							outputTextBox.placeholder = 'Edit expected output';
 
 							const tickButton = document.createElement('button');
-							tickButton.innerHTML = 'tick';
-							tickButton.style.marginTop = '10px';
+							tickButton.innerHTML = '&#10003';
+							
 
 							tickButton.addEventListener('click', () => {
 								const updatedInput = inputTextBox.value;
