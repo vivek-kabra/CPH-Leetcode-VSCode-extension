@@ -297,6 +297,16 @@ class TestCasesViewProvider {
 					.editButton:hover {
 						background-color: rgb(1, 83, 170);
 					}
+					.addButton {
+						background-color: #007BFF; 
+						color: black; 
+                        border: 2px solid rgb(0, 49, 102);
+                        border-radius: 5px;
+                        display: block;
+                        margin: 10px auto;
+                        font-size: 14px;
+                        cursor: pointer;
+					}
 					.saveButton {
 						background-color: #007BFF; 
 						color: black; 
@@ -304,9 +314,37 @@ class TestCasesViewProvider {
 						border-radius: 5px; 
 						font-size: 14px;
 						cursor: pointer;
-						
 					}
 					.saveButton:hover {
+						background-color: rgb(1, 83, 170);
+					}
+					.addSaveButton {
+						background-color: #007BFF; 
+						color: black; 
+						border: 2px solid rgb(0, 49, 102);
+						border-radius: 5px; 
+						font-size: 14px;
+						cursor: pointer;
+					}
+					.addSaveButton:hover {
+						background-color: rgb(1, 83, 170);
+					}
+					
+					button.addButton:hover {
+						background-color: rgb(1, 83, 170);
+						
+					}
+					.closeButton {
+						background-color: #007BFF; 
+						color: black; 
+						border: 2px solid rgb(0, 49, 102);
+						border-radius: 5px; 
+						font-size: 14px;
+						margin-left: 15px;
+						display: inline-block;
+						cursor: pointer;
+					}
+					.closeButton:hover {
 						background-color: rgb(1, 83, 170);
 					}
 					input[type="text"] {
@@ -319,10 +357,10 @@ class TestCasesViewProvider {
 			<body>
 				<h2>CPH-Leetcode</h2>
 				<input type="text" id="problemUrl" placeholder="Enter LeetCode problem URL" style="width: 90%; padding: 8px; margin-bottom: 10px;">
-				<button id="fetchTestCasesBtn">Fetch test cases</button>
+				<button id="fetchTestCasesButton">Fetch test cases</button>
 				<p id="statusLabel">Enter the URL and fetch test cases</p>
 				<br>
-				<button id="runTestCasesBtn" disabled>Run test cases</button>
+				<button id="runTestCasesButton" disabled>Run test cases</button>
 				<p id="runStatusLabel">Fetch test cases first.</p>
 				<div id="resultsContainer"></div>
 
@@ -330,7 +368,7 @@ class TestCasesViewProvider {
 					const vscode = acquireVsCodeApi();
 					let testCases = [];
 
-					document.getElementById('fetchTestCasesBtn').addEventListener('click', () => {
+					document.getElementById('fetchTestCasesButton').addEventListener('click', () => {
 						const problemUrl = document.getElementById('problemUrl').value;
 						if (problemUrl.trim()!='') {
 							document.getElementById('statusLabel').innerText = 'Fetching test cases...';
@@ -338,7 +376,7 @@ class TestCasesViewProvider {
 						}
 					});
 
-					document.getElementById('runTestCasesBtn').addEventListener('click', ()=> {
+					document.getElementById('runTestCasesButton').addEventListener('click', ()=> {
 							vscode.postMessage({ command: 'runTestCases', testCases });
 					});
 
@@ -349,7 +387,7 @@ class TestCasesViewProvider {
 							case 'showTestCases':
 								testCases = message.testCases;
 								document.getElementById('statusLabel').innerText = 'Test cases fetched!';
-								document.getElementById('runTestCasesBtn').disabled = false;
+								document.getElementById('runTestCasesButton').disabled = false;
 								document.getElementById('runStatusLabel').innerText = '';
 								displayTestCases(testCases);
 								break;
@@ -410,7 +448,6 @@ class TestCasesViewProvider {
 									});
 									editContainer.style.display = 'none';
 									editButton.style.display = 'inline';
-									
 								}
 								else{
 									vscode.postMessage({ command: 'showError', message: 'Missing field(s)' });
@@ -440,8 +477,67 @@ class TestCasesViewProvider {
 							resultsContainer.appendChild(card);
 						});
 
+						const addButton = document.createElement('button');
+						addButton.className = 'addButton';
+						addButton.innerHTML = '+ Add test case';
 
+						addButton.addEventListener('click', () => {
+							resultsContainer.removeChild(addButton);
+							const addCard = document.createElement('div');
+							addCard.className = 'card';
 
+							const newLabel = document.createElement('p');
+							newLabel.textContent = 'New test case';
+							newLabel.style.fontWeight = 'bold';
+
+							const addInputTextBox = document.createElement('textarea');
+							addInputTextBox.style.width = '90%';
+							addInputTextBox.style.marginTop = '10px';
+							addInputTextBox.placeholder = 'Enter input';
+
+							const addOutputTextBox = document.createElement('textarea');
+							addOutputTextBox.style.width = '90%';
+							addOutputTextBox.style.marginTop = '10px';
+							addOutputTextBox.placeholder = 'Enter expected output';
+
+							const addSaveButton = document.createElement('button');
+							addSaveButton.className = 'addSaveButton';
+							addSaveButton.innerHTML = 'Add'; 
+							addSaveButton.style.marginTop = '10px';
+
+							addSaveButton.addEventListener('click', () => {
+								const addInput = addInputTextBox.value;
+								const addOutput = addOutputTextBox.value;
+								if (addInput!="" && addOutput!="") {
+									vscode.postMessage({
+										command: 'addTestCase',
+										input: addInput,
+										expectedOutput: addOutput,
+									});
+									resultsContainer.removeChild(addCard);
+									resultsContainer.appendChild(addButton);
+								}
+								else {
+									vscode.postMessage({ command: 'showError', message: 'Missing field(s)' });
+								}
+							});
+							const closeButton = document.createElement('button');
+							closeButton.className = 'closeButton';
+							closeButton.innerHTML = 'Close'; 
+							closeButton.addEventListener('click', () => {
+								resultsContainer.removeChild(addCard);
+								resultsContainer.appendChild(addButton);
+							});
+
+							addCard.appendChild(newLabel);
+							addCard.appendChild(addInputTextBox);
+							addCard.appendChild(addOutputTextBox);
+							addCard.appendChild(addSaveButton);
+							addCard.appendChild(closeButton);
+
+							resultsContainer.appendChild(addCard);
+						});
+						resultsContainer.appendChild(addButton);
 					}
 					
 
