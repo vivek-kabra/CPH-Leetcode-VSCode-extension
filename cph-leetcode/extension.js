@@ -48,6 +48,9 @@ class TestCasesViewProvider {
 				case 'showError':
 					vscode.window.showErrorMessage(message.message);
 					return;
+				case 'showInfo':
+					vscode.window.showInformationMessage(message.message);
+					return;
             }
         });
     }
@@ -79,7 +82,7 @@ class TestCasesViewProvider {
 		});
 	}
 	updateTestCases(testCaseId, new_input, new_expectedOutput, webviewView){
-		const scriptPath= path.join(__dirname, 'test_cases_updating')
+		const scriptPath= path.join(__dirname, 'test_cases_updating');
 		cp.exec(`${scriptPath} ${__dirname} ${testCaseId} ${new_input} ${new_expectedOutput}`, (error, stdout, stderr) =>{
 			if (error){
 				vscode.window.showErrorMessage(`Error updating test cases: ${stderr}`);
@@ -287,23 +290,23 @@ class TestCasesViewProvider {
 						color: black; 
 						border: 2px solid rgb(0, 49, 102);
 						border-radius: 5px; 
-						font-size: 17px;
+						font-size: 14px;
 						cursor: pointer;
 						
 					}
 					.editButton:hover {
 						background-color: rgb(1, 83, 170);
 					}
-					.tickButton {
+					.saveButton {
 						background-color: #007BFF; 
 						color: black; 
 						border: 2px solid rgb(0, 49, 102);
 						border-radius: 5px; 
-						font-size: 17px;
+						font-size: 14px;
 						cursor: pointer;
 						
 					}
-					.tickButton:hover {
+					.saveButton:hover {
 						background-color: rgb(1, 83, 170);
 					}
 					input[type="text"] {
@@ -361,7 +364,7 @@ class TestCasesViewProvider {
 					function displayTestCases(testCases) {
 						const resultsContainer = document.getElementById('resultsContainer');
 						resultsContainer.innerHTML = ''; 
-
+						let editContainerOpen=false;
 						testCases.forEach(testCase => {
 							const card = document.createElement('div');
 							card.className = 'card'; 
@@ -374,7 +377,7 @@ class TestCasesViewProvider {
 							
 							const editButton = document.createElement('button');
 							editButton.className = 'editButton';
-							editButton.innerHTML = '&#9998';
+							editButton.innerHTML = 'Edit';
 							
 							const editContainer = document.createElement('div');
 							editContainer.style.display = 'none';
@@ -390,11 +393,12 @@ class TestCasesViewProvider {
 							outputTextBox.style.marginTop = '10px';
 							outputTextBox.placeholder = 'Edit expected output';
 
-							const tickButton = document.createElement('button');
-							tickButton.innerHTML = '&#10003';
+							const saveButton = document.createElement('button');
+							saveButton.className = 'saveButton';
+							saveButton.innerHTML = 'Save';
 							
-
-							tickButton.addEventListener('click', () => {
+							saveButton.addEventListener('click', () => {
+								editContainerOpen=false;
 								const updatedInput = inputTextBox.value;
 								const updatedOutput = outputTextBox.value;
 								if (updatedInput!="" && updatedOutput!="") {
@@ -415,13 +419,18 @@ class TestCasesViewProvider {
 							});
 
 							editButton.addEventListener('click', () => {
+								if (editContainerOpen){
+									vscode.postMessage({ command: 'showInfo', message: 'One editing window already open' });
+									return;
+								}
+								editContainerOpen=true;
 								editContainer.style.display = 'block';
 								editButton.style.display = 'none';
 							});
 
 							editContainer.appendChild(inputTextBox);
 							editContainer.appendChild(outputTextBox);
-							editContainer.appendChild(tickButton);
+							editContainer.appendChild(saveButton);
 
 							card.appendChild(testCasePara);
 							card.appendChild(inputPara);
@@ -430,6 +439,9 @@ class TestCasesViewProvider {
 
 							resultsContainer.appendChild(card);
 						});
+
+
+
 					}
 					
 
