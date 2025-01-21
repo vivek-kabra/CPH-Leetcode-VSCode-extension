@@ -43,7 +43,7 @@ class TestCasesViewProvider {
 					this.runTestCases(language,	 runCmd, webviewView);
                     return;
 				case 'updateTestCase':
-					this.updateTestCases(message.testCaseId, message.input, message.expectedOutput, webviewView);
+					this.updateTestCases(message.action, message.testCaseId, message.input, message.expectedOutput, webviewView);
 					return;
 				case 'showError':
 					vscode.window.showErrorMessage(message.message);
@@ -81,11 +81,11 @@ class TestCasesViewProvider {
 			}
 		});
 	}
-	updateTestCases(testCaseId, new_input, new_expectedOutput, webviewView){
+	updateTestCases(action, testCaseId, new_input, new_expectedOutput, webviewView){
 		const scriptPath= path.join(__dirname, 'test_cases_updating');
-		cp.exec(`${scriptPath} ${__dirname} ${testCaseId} ${new_input} ${new_expectedOutput}`, (error, stdout, stderr) =>{
+		cp.exec(`${scriptPath} ${action} ${__dirname} ${testCaseId} "${new_input}" "${new_expectedOutput}"`, (error, stdout, stderr) =>{
 			if (error){
-				vscode.window.showErrorMessage(`Error updating test cases: ${stderr}`);
+				vscode.window.showErrorMessage(`Error updating test case: ${stderr}`);
 			}
 			else{
 				const testCasesDir = path.join(__dirname, 'input');
@@ -102,7 +102,13 @@ class TestCasesViewProvider {
 					});
 				});
 				webviewView.webview.postMessage({ command: 'showTestCases', testCases });
-				vscode.window.showInformationMessage('Test case updated');
+				if (action=="EDIT"){
+					vscode.window.showInformationMessage('Test case edited');
+				}
+				else{
+					vscode.window.showInformationMessage('Test case added');
+				}
+				
 			}
 		});
 	}
@@ -412,6 +418,7 @@ class TestCasesViewProvider {
 
 							const inputPara = document.createElement('p');
 							inputPara.innerHTML = '<strong>Input:</strong> ' + testCase.input;
+
 							
 							const editButton = document.createElement('button');
 							editButton.className = 'editButton';
@@ -442,9 +449,10 @@ class TestCasesViewProvider {
 								if (updatedInput!="" && updatedOutput!="") {
 									vscode.postMessage({
 										command: 'updateTestCase',
+										action: "EDIT",
 										testCaseId: testCase.testCaseId,
 										input: updatedInput,
-										expectedOutput: updatedOutput,
+										expectedOutput: updatedOutput
 									});
 									editContainer.style.display = 'none';
 									editButton.style.display = 'inline';
@@ -510,9 +518,11 @@ class TestCasesViewProvider {
 								const addOutput = addOutputTextBox.value;
 								if (addInput!="" && addOutput!="") {
 									vscode.postMessage({
-										command: 'addTestCase',
+										command: 'updateTestCase',
+										action: "ADD",
+										testCaseId: 0,
 										input: addInput,
-										expectedOutput: addOutput,
+										expectedOutput: addOutput
 									});
 									resultsContainer.removeChild(addCard);
 									resultsContainer.appendChild(addButton);
