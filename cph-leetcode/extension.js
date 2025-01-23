@@ -56,7 +56,21 @@ class TestCasesViewProvider {
     }
 
 	fetchTestCases(problemURL, webviewView){
-		const scriptPath= path.join(__dirname, 'test_cases_fetching')
+		const platform=process.platform;
+		let scriptPath;
+		if (platform=='win32'){
+			scriptPath= path.join(__dirname, 'executables', 'test_cases_fetching_windows.exe');
+		}
+		else if (platform=='darwin'){
+			scriptPath= path.join(__dirname, 'executables', 'test_cases_fetching_mac');
+		}
+		else if (platform=='linux'){
+			scriptPath= path.join(__dirname, 'executables', 'test_cases_fetching_linux');
+		}
+		else{
+			vscode.window.showErrorMessage('Unsupported platform');
+			return;
+		}
 		cp.exec(`${scriptPath} ${problemURL} ${__dirname}`, (error, stdout, stderr) =>{
 			if (error){
 				vscode.window.showErrorMessage(`Error fetching test cases: ${stderr}`);
@@ -82,7 +96,21 @@ class TestCasesViewProvider {
 		});
 	}
 	updateTestCases(action, testCaseId, new_input, new_expectedOutput, webviewView){
-		const scriptPath= path.join(__dirname, 'test_cases_updating');
+		const platform=process.platform;
+		let scriptPath;
+		if (platform=='win32'){
+			scriptPath= path.join(__dirname, 'executables', 'test_cases_updating_windows.exe');
+		}
+		else if (platform=='darwin'){
+			scriptPath= path.join(__dirname, 'executables', 'test_cases_updating_mac');
+		}
+		else if (platform=='linux'){
+			scriptPath= path.join(__dirname, 'executables', 'test_cases_updating_linux');
+		}
+		else{
+			vscode.window.showErrorMessage('Unsupported platform');
+			return;
+		}
 		cp.exec(`${scriptPath} ${action} ${__dirname} ${testCaseId} "${new_input}" "${new_expectedOutput}"`, (error, stdout, stderr) =>{
 			if (error){
 				vscode.window.showErrorMessage(`Error updating test case: ${stderr}`);
@@ -357,6 +385,12 @@ class TestCasesViewProvider {
 						border-radius: 25px; 
 						border: 2px solid #007BFF;
 						outline: none; 
+					}
+					textarea{
+						border-radius: 15px; 
+						border: 2px solid #007BFF;
+						outline: none;
+						padding-top: 5px;
 					}
 				</style>
 			</head>
